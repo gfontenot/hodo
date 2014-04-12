@@ -1,4 +1,5 @@
 module Hodo where
+import System.Environment (getArgs)
 import Control.Applicative
 import System.Directory (removeFile, renameFile)
 import System.IO (hFlush, stdout, hClose, openTempFile, hPutStr)
@@ -12,26 +13,19 @@ type Tasks = [String]
 
 perform :: Operation -> Tasks
 perform (Operation "add" newTask tasks) = tasks ++ [newTask]
-perform (Operation "complete" number tasks) = delete (tasks !! (read number)) tasks
+perform (Operation "complete" number tasks) = tasks `remove` (read number)
 perform (Operation _ _ tasks) = tasks
 
-write :: Tasks -> IO ()
-write tasks = do
-    bracketOnError (openTempFile "." "temp")
-        (\(tempName, tempHandle) -> do
-            hClose tempHandle
-            removeFile tempName)
-        (\(tempName, tempHandle) -> do
-            hPutStr tempHandle $ unlines tasks
-            hClose tempHandle
-            removeFile "todo.txt"
-            renameFile tempName "todo.txt")
+remove :: Eq a => [a] -> Int -> [a]
+remove xs i = delete (xs !! i) xs
 
 listItems :: Tasks -> IO Tasks
 listItems tasks = do
-    let numberedTasks = zipWith (\n line -> show n ++ " - " ++ line) [0..] tasks
-    mapM_ putStrLn numberedTasks
+    mapM_ putStrLn $ numbered tasks
     return tasks
+
+numbered :: [String] -> [String]
+numbered = zipWith (\n line -> show n ++ " - " ++ line) [0..]
 
 getPrompt :: IO String
 getPrompt = do
@@ -41,9 +35,10 @@ getPrompt = do
 
 main :: IO ()
 main = do
-    tasks <- lines <$> readFile "todo.txt"
+    filename <- unwords <$> getArgs
+    tasks <- lines <$> readFile filename
     (command:args) <- words <$> getPrompt
     newTasks <- listItems . perform $ Operation command (unwords args) tasks
-    write newTasks
+    writeFile filename $ unlines newTasks
     putStrLn ""
     main
