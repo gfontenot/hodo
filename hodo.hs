@@ -13,11 +13,12 @@ type Tasks = [String]
 
 perform :: Operation -> Tasks
 perform (Operation "add" newTask tasks) = tasks ++ [newTask]
-perform (Operation "complete" number tasks) = tasks `remove` (read number)
+perform (Operation "complete" number tasks) = tasks `remove` (reads number)
 perform (Operation _ _ tasks) = tasks
 
-remove :: Eq a => [a] -> Int -> [a]
-remove xs i = delete (xs !! i) xs
+remove :: Eq a => [a] -> [(Int, String)] -> [a]
+remove xs [] = xs
+remove xs [(i, _)] = delete (xs !! i) xs
 
 listItems :: Tasks -> IO Tasks
 listItems tasks = do
